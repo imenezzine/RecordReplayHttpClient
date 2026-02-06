@@ -7,70 +7,67 @@ use Symfony\Component\HttpClient\HttpClientTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpClient\Response\ResponseStream;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
-use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\HttpClientRecorderBundle\Enum\RecordReplayMode;
-use Symfony\HttpClientRecorderBundle\Har\HarFile;
+use Symfony\HttpClientRecorderBundle\Har\HarFileFactory;
 
-class RecordReplayHttpClient implements HttpClientInterface
+final class RecordReplayHttpClient implements HttpClientInterface
 {
     use HttpClientTrait;
 
-    private static string $harFilename = 'default';
+    private static RecordReplayMode $mode = RecordReplayMode::PASS_THROUGH;
+    private static string $record = 'default.har';
+
+    public static function setMode(RecordReplayMode $mode): void
+    {
+        self::$mode = $mode;
+    }
+
+    public static function setRecord(string $record): void
+    {
+        self::$record = $record;
+    }
 
     public function __construct(
-        private readonly HttpClientInterface $client,
-        private readonly string $cassettePath,
-        private readonly RecordReplayMode $mode = RecordReplayMode::REPLAY_OR_RECORD
+        private readonly HttpClientInterface $inner,
+        private readonly string $recordsDir,
+        private readonly HarFileFactory $harFactory,
     ) {
     }
 
-    public static function setHarFilename(string $filename): void
-    {
-        static::$harFilename = $filename;
-    }
-
-    /**
-     * @throws TransportExceptionInterface
-     * @throws \JsonException
-     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        $harPath = $this->cassettePath . '/' . static::$harFilename;
-
-        if (file_exists($harPath) && file_get_contents($harPath)) {
-            $harFile = HarFile::createFromFile($harPath);
-        } else {
-            $harFile = HarFile::create();
+        if (self::$mode === RecordReplayMode::PASS_THROUGH) {
+            return $this->inner->request($method, $url, $options);
         }
 
-        if ($this->mode === RecordReplayMode::RECORD) {
-            $response = $this->client->request($method, $url, $options);
-            $harFile = $harFile->withEntry($response, $method, $url, $options);
-            (new Filesystem())->dumpFile($harPath, json_encode($harFile->toArray(), \JSON_PRETTY_PRINT));
-        }
+        $path = $this->recordsDir.'/'.self::$record;
+        $har = $this->harFactory->load($path);
+        $fs = new Filesystem();
 
-        // Lecture HAR + fallback
-        try {
-            $response = (new MockHttpClient($harFile->find($method, $url, $options)))->request($method, $url, $options);
-        } catch (TransportException $e) {
-            if ($this->mode !== RecordReplayMode::RECORD_IF_MISSING) {
-                throw $e;
+        if (self::$mode !== RecordReplayMode::RECORD) {
+            try {
+                return (new MockHttpClient(
+                    $har->findEntry($method, $url, $options)
+                ))->request($method, $url, $options);
+            } catch (\Throwable $e) {
+                if (self::$mode === RecordReplayMode::PLAYBACK) {
+                    throw $e;
+                }
             }
-
-            // Mode RECORD_IF_MISSING
-            $response = $this->client->request($method, $url, $options);
-            $harFile = $harFile->withEntry($response, $method, $url, $options);
-            (new Filesystem())->dumpFile($harPath, json_encode($harFile->toArray(), \JSON_PRETTY_PRINT));
         }
+
+        $response = $this->inner->request($method, $url, $options);
+        $har->withEntry($response, $method, $url, $options);
+
+        $fs->dumpFile($path, json_encode($har->toArray(), \JSON_PRETTY_PRINT));
 
         return $response;
     }
 
-    public function stream(ResponseInterface|iterable $responses, ?float $timeout = null): ResponseStreamInterface
+    public function stream($responses, float $timeout = null): ResponseStreamInterface
     {
         if ($responses instanceof ResponseInterface) {
             $responses = [$responses];
