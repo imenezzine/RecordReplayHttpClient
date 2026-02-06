@@ -2,17 +2,12 @@
 
 namespace Symfony\HttpClientRecorderBundle\Har;
 
-use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\Clock\Clock;
 
 final class HarFileFactory
 {
-    public function __construct(
-        private readonly ClockInterface $clock,
-    ) {
-    }
-
     public function load(string $path): HarFile
     {
-        return HarFile::createFromFile($path, $this->clock);
+        return HarFile::createFromFile($path, Clock::get());
     }
 }

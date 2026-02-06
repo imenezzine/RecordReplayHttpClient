@@ -2,14 +2,14 @@
 
 namespace Symfony\HttpClientRecorderBundle\Attribute;
 
-use Symfony\HttpClientRecorderBundle\Enum\RecordReplayMode;
+use Symfony\HttpClientRecorderBundle\Enum\RecorderMode;
 
 #[\Attribute(\Attribute::TARGET_METHOD)]
 final readonly class UseRecord
 {
     public function __construct(
-        public RecordReplayMode   $mode,
-        public string $record,
+        public ?RecorderMode $mode = null,
+        public ?string $record = null,
     ) {
     }
 }

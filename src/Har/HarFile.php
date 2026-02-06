@@ -2,7 +2,10 @@
 
 namespace Symfony\HttpClientRecorderBundle\Har;
 
+use DateTimeZone;
+use Symfony\Component\Clock\Clock;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\Clock\DatePoint;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -11,11 +14,10 @@ final class HarFile
 {
     public function __construct(
         private array $har,
-        private ClockInterface $clock,
     ) {
     }
 
-    public static function create(ClockInterface $clock): self
+    public static function create(): self
     {
         return new self([
             'log' => [
@@ -23,19 +25,16 @@ final class HarFile
                 'creator' => ['name' => 'HttpRecorder'],
                 'entries' => [],
             ],
-        ], $clock);
+        ]);
     }
 
     public static function createFromFile(string $path, ClockInterface $clock): self
     {
         if (!is_file($path)) {
-            return self::create($clock);
+            return self::create();
         }
 
-        return new self(
-            json_decode(file_get_contents($path), true, \JSON_THROW_ON_ERROR),
-            $clock
-        );
+        return new self(json_decode(file_get_contents($path), true, \JSON_THROW_ON_ERROR));
     }
 
     public function findEntry(string $method, string $url, array $options = []): ResponseInterface
@@ -56,13 +55,8 @@ final class HarFile
 
     public function withEntry(ResponseInterface $response, string $method, string $url, array $options = []): self
     {
-        $startedDateTime = $this->clock
-            ->now()
-            ->setTimezone(new \DateTimeZone('UTC'))
-            ->format('Y-m-d\TH:i:s.v\Z');
-
         $this->har['log']['entries'][] = [
-            'startedDateTime' => $startedDateTime,
+            'startedDateTime' => (new DatePoint('now'))->format('Y-m-d\TH:i:s.v\Z'),
             'request' => [
                 'method' => $method,
                 'url' => $url,
