@@ -37,7 +37,7 @@ final class HttpClientRecorderBundle extends AbstractBundle implements CompilerP
 
         $container->parameters()->set('http_client.recorder.records_path', $config['records_path']);
     }
-    
+
     public function build(ContainerBuilder $container): void
     {
         $container->addCompilerPass($this);

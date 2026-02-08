@@ -50,10 +50,14 @@ final class HarFile
         throw new TransportException(sprintf('No HAR entry for "%s %s".', $method, $url));
     }
 
-    public function withEntry(ResponseInterface $response, string $method, string $url, array $options = []): self
-    {
-        $this->har['log']['entries'][] = [
-            'startedDateTime' => (new DatePoint('now'))->format('Y-m-d\TH:i:s.v\Z'),
+    public function withEntry(
+        ResponseInterface $response,
+        string $method,
+        string $url,
+        array $options = [],
+    ): self {
+        $entry = [
+            'startedDateTime' => new DatePoint('now')->format('Y-m-d\TH:i:s.v\Z'),
             'request' => [
                 'method' => $method,
                 'url' => $url,
@@ -66,7 +70,33 @@ final class HarFile
             ],
         ];
 
+        foreach ($this->har['log']['entries'] as $index => $existingEntry) {
+            if ($this->matches($existingEntry, $method, $url, $options)) {
+                $this->har['log']['entries'][$index] = $entry;
+
+                return $this;
+            }
+        }
+
+        $this->har['log']['entries'][] = $entry;
+
         return $this;
+    }
+
+    private function matches(array $entry, string $method, string $url, array $options): bool
+    {
+        if ($entry['request']['method'] !== $method) {
+            return false;
+        }
+
+        if ($entry['request']['url'] !== $url) {
+            return false;
+        }
+
+        $expectedBody = $options['body'] ?? null;
+        $actualBody = $entry['request']['postData']['text'] ?? null;
+
+        return $expectedBody === $actualBody;
     }
 
     public function toArray(): array
