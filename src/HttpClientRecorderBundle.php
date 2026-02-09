@@ -12,9 +12,6 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use Symfony\HttpClientRecorderBundle\Har\HarFileFactory;
 use Symfony\HttpClientRecorderBundle\HttpClient\RecorderHttpClient;
 
-use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
-use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
-
 final class HttpClientRecorderBundle extends AbstractBundle implements CompilerPassInterface
 {
     public function configure(DefinitionConfigurator $definition): void

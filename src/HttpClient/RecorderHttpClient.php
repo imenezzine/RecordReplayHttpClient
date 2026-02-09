@@ -37,24 +37,24 @@ final class RecorderHttpClient implements HttpClientInterface
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        if (self::$mode === RecorderMode::PASS_THROUGH) {
+        if (RecorderMode::PASS_THROUGH === self::$mode) {
             return $this->inner->request($method, $url, $options);
         }
 
         $har = $this->harFactory->load($this->getRecordPath());
 
-        if (self::$mode === RecorderMode::PLAYBACK) {
+        if (RecorderMode::PLAYBACK === self::$mode) {
             return $this->playback($har, $method, $url, $options);
         }
 
-        if (self::$mode === RecorderMode::RECORD) {
+        if (RecorderMode::RECORD === self::$mode) {
             return $this->record($har, $method, $url, $options);
         }
 
-        if (self::$mode === RecorderMode::NEW_EPISODES) {
+        if (RecorderMode::NEW_EPISODES === self::$mode) {
             try {
                 return $this->playback($har, $method, $url, $options);
-            } catch(TransportException) {
+            } catch (TransportException) {
                 return $this->record($har, $method, $url, $options);
             }
         }
@@ -68,7 +68,7 @@ final class RecorderHttpClient implements HttpClientInterface
     private function playback($har, $method, $url, $options): ResponseInterface
     {
         $response = $har->findEntry($method, $url, $options);
-        
+
         return (new MockHttpClient($response))->request($method, $url, $options);
     }
 
@@ -77,9 +77,9 @@ final class RecorderHttpClient implements HttpClientInterface
         $response = $this->inner->request($method, $url, $options);
 
         $har = $har->withEntry($response, $method, $url, $options);
-        
-        (new Filesystem())->dumpFile($this->getRecordPath(), json_encode($har->toArray(), flags:\JSON_PRETTY_PRINT));
-        
+
+        (new Filesystem())->dumpFile($this->getRecordPath(), json_encode($har->toArray(), flags: \JSON_PRETTY_PRINT));
+
         return (new MockHttpClient($response))->request($method, $url, $options);
     }
 }
