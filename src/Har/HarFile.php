@@ -2,9 +2,6 @@
 
 namespace Symfony\HttpClientRecorderBundle\Har;
 
-use DateTimeZone;
-use Symfony\Component\Clock\Clock;
-use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\DatePoint;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -28,7 +25,7 @@ final class HarFile
         ]);
     }
 
-    public static function createFromFile(string $path, ClockInterface $clock): self
+    public static function createFromFile(string $path): self
     {
         if (!is_file($path)) {
             return self::create();

@@ -5,7 +5,6 @@ namespace Symfony\HttpClientRecorderBundle\HttpClient;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\AsyncDecoratorTrait;
 use Symfony\Component\HttpClient\Exception\TransportException;
-use Symfony\Component\HttpClient\HttpClientTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
