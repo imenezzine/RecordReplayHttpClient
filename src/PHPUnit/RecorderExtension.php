@@ -2,25 +2,15 @@
 
 namespace Symfony\HttpClientRecorderBundle\PHPUnit;
 
-use PHPUnit\Event\Test\BeforeTestMethodCalled;
-use PHPUnit\Event\Test\BeforeTestMethodCalledSubscriber;
-use Symfony\HttpClientRecorderBundle\Attribute\UseRecord;
-use Symfony\HttpClientRecorderBundle\HttpClient\RecordReplayHttpClient;
+use PHPUnit\Runner\Extension\Extension;
+use PHPUnit\Runner\Extension\Facade;
+use PHPUnit\Runner\Extension\ParameterCollection;
+use PHPUnit\TextUI\Configuration\Configuration;
 
-final class RecorderExtension implements BeforeTestMethodCalledSubscriber
+class RecorderExtension implements Extension
 {
-    public function notify(BeforeTestMethodCalled $event): void
+    public function bootstrap(Configuration $configuration, Facade $facade, ParameterCollection $parameters): void
     {
-        $method = new \ReflectionMethod(
-            $event->testClassName(),
-            $event->testMethodName()
-        );
-
-        foreach ($method->getAttributes(UseRecord::class) as $attribute) {
-            $config = $attribute->newInstance();
-
-            RecordReplayHttpClient::setMode($config->mode);
-            RecordReplayHttpClient::setRecord($config->record);
-        }
+        $facade->registerSubscriber(new RecorderSubscriber());
     }
 }

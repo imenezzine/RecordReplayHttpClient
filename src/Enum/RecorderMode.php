@@ -2,7 +2,7 @@
 
 namespace Symfony\HttpClientRecorderBundle\Enum;
 
-enum RecordReplayMode: string
+enum RecorderMode: string
 {
     case RECORD = 'record';
     case PLAYBACK = 'playback';
