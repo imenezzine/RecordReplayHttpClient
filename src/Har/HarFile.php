@@ -50,7 +50,7 @@ final class HarFile
         throw new TransportException(sprintf('No HAR entry for "%s %s".', $method, $url));
     }
 
-    public function withEntry(
+    public function addEntry(
         ResponseInterface $response,
         string $method,
         string $url,

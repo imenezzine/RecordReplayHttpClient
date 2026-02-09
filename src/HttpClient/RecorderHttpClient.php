@@ -76,7 +76,7 @@ final class RecorderHttpClient implements HttpClientInterface
     {
         $response = $this->inner->request($method, $url, $options);
 
-        $har = $har->withEntry($response, $method, $url, $options);
+        $har = $har->addEntry($response, $method, $url, $options);
 
         (new Filesystem())->dumpFile($this->getRecordPath(), json_encode($har->toArray(), flags: \JSON_PRETTY_PRINT));
 
