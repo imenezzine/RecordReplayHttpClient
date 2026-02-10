@@ -23,10 +23,9 @@ final class RecorderHttpClient implements HttpClientInterface
     public function __construct(
         private readonly HttpClientInterface $inner,
         private readonly HarFileFactory $harFactory,
-        private MatcherInterface $matcher,
         private readonly string $recordsDir,
-    ) {
-        $this->matcher = new DefaultMatcher();
+        private readonly MatcherInterface $matcher = new DefaultMatcher(),
+) {
     }
 
     public static function setMode(RecorderMode $mode): void
