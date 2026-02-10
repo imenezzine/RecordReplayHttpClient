@@ -10,6 +10,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\HttpClientRecorderBundle\Enum\RecorderMode;
 use Symfony\HttpClientRecorderBundle\Har\HarFileFactory;
+use Symfony\HttpClientRecorderBundle\Matcher\DefaultMatcher;
+use Symfony\HttpClientRecorderBundle\Matcher\MatcherInterface;
 
 final class RecorderHttpClient implements HttpClientInterface
 {
@@ -21,8 +23,10 @@ final class RecorderHttpClient implements HttpClientInterface
     public function __construct(
         private readonly HttpClientInterface $inner,
         private readonly HarFileFactory $harFactory,
+        private MatcherInterface $matcher,
         private readonly string $recordsDir,
     ) {
+        $this->matcher = new DefaultMatcher();
     }
 
     public static function setMode(RecorderMode $mode): void
