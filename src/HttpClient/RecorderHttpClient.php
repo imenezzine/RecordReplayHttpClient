@@ -2,7 +2,6 @@
 
 namespace Symfony\HttpClientRecorderBundle\HttpClient;
 
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\AsyncDecoratorTrait;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -10,8 +9,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\HttpClientRecorderBundle\Enum\RecorderMode;
 use Symfony\HttpClientRecorderBundle\Har\HarFileFactory;
+use Symfony\HttpClientRecorderBundle\Har\HttpRecord;
 use Symfony\HttpClientRecorderBundle\Matcher\DefaultMatcher;
 use Symfony\HttpClientRecorderBundle\Matcher\MatcherInterface;
+use Symfony\HttpClientRecorderBundle\Store\StoreInterface;
 
 final class RecorderHttpClient implements HttpClientInterface
 {
@@ -23,10 +24,10 @@ final class RecorderHttpClient implements HttpClientInterface
     public function __construct(
         private readonly HttpClientInterface $inner,
         private readonly HarFileFactory $harFactory,
-        private MatcherInterface $matcher,
-        private readonly string $recordsDir,
+        private readonly StoreInterface $store,
+        private MatcherInterface $matcher = new DefaultMatcher(),
+        private readonly string $recordsDir = '',
     ) {
-        $this->matcher = new DefaultMatcher();
     }
 
     public static function setMode(RecorderMode $mode): void
@@ -45,7 +46,7 @@ final class RecorderHttpClient implements HttpClientInterface
             return $this->inner->request($method, $url, $options);
         }
 
-        $har = $this->harFactory->load($this->getRecordPath());
+        $har = $this->harFactory->load(self::$record);
 
         if (RecorderMode::PLAYBACK === self::$mode) {
             return $this->playback($har, $method, $url, $options);
@@ -62,27 +63,25 @@ final class RecorderHttpClient implements HttpClientInterface
                 return $this->record($har, $method, $url, $options);
             }
         }
+
+        throw new \RuntimeException('Unknown recorder mode');
     }
 
-    private function getRecordPath(): string
+    private function playback($har, string $method, string $url, array $options): ResponseInterface
     {
-        return $this->recordsDir.'/'.self::$record;
-    }
-
-    private function playback($har, $method, $url, $options): ResponseInterface
-    {
-        $response = $har->findEntry($method, $url, $options);
+        $response = $har->findEntry($this->matcher, $method, $url, $options);
 
         return (new MockHttpClient($response))->request($method, $url, $options);
     }
 
-    private function record($har, $method, $url, $options): ResponseInterface
+    private function record($har, string $method, string $url, array $options): ResponseInterface
     {
         $response = $this->inner->request($method, $url, $options);
 
-        $har = $har->addEntry($response, $method, $url, $options);
+        $record = new HttpRecord($response, $method, $url, $options);
+        $har->addEntry($this->matcher, $record);
 
-        (new Filesystem())->dumpFile($this->getRecordPath(), json_encode($har->toArray(), flags: \JSON_PRETTY_PRINT));
+        $this->store->save(self::$record, $har->getRecords());
 
         return (new MockHttpClient($response))->request($method, $url, $options);
     }
