@@ -51,6 +51,7 @@ final class HarFile
             'request' => [
                 'method' => $method,
                 'url' => $url,
+                'headers' => $options['headers'] ?? [],
                 'postData' => isset($options['body'])
                     ? ['text' => $options['body']]
                     : null,
