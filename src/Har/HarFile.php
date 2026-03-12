@@ -34,7 +34,10 @@ final class HarFile
 
             return new MockResponse(
                 $this->decodeContent($entry['response']['content']),
-                ['http_code' => $entry['response']['status']]
+                [
+                    'http_code' => $entry['response']['status'],
+                    'response_headers' => $entry['response']['headers'] ?? [],
+                ]
             );
         }
 
@@ -48,12 +51,14 @@ final class HarFile
             'request' => [
                 'method' => $method,
                 'url' => $url,
+                'headers' => $options['headers'] ?? [],
                 'postData' => isset($options['body'])
                     ? ['text' => $options['body']]
                     : null,
             ],
             'response' => [
                 'status' => $response->getStatusCode(),
+                'headers' => $response->getHeaders(false),
                 'content' => [
                     'text' => $response->getContent(false),
                 ],
