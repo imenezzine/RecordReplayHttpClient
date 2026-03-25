@@ -2,11 +2,15 @@
 
 namespace Symfony\HttpClientRecorderBundle\Matcher;
 
+use Symfony\HttpClientRecorderBundle\Har\HarFile;
+
+/**
+ * @psalm-import-type HarEntry from HarFile
+ */
 interface MatcherInterface
 {
     /**
-     * @param array<string, mixed> $harEntry
-     * @param array<string, mixed> $options
+     * @psalm-param HarEntry $harEntry
      */
     public function matches(
         array $harEntry,

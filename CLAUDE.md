@@ -24,35 +24,23 @@ Key components:
 
 # Directory Structure
 
-- `src/Attribute` - `UseRecord` attribute for recording/playback control in PHPUnit tests
-- `src/Enum` - `RecorderMode` enum (record, playback, new_episodes, passthrough)
-- `src/Exception` - Custom exceptions for recording/playback errors
+- `src/RecorderMode.php` - Constant registry for native modes (record, replay, record_if_missing_and_replay, passthrough)
+- `src/Exception` - Custom exceptions for recording/replay errors
 - `src/Har` - HAR file handling (should be used later in HarFileResponseFactory)
-- `src/HttpClient` - `RecorderHttpClient` decorator that handles recording/playback
+- `src/HttpClient` - `RecorderHttpClient` decorator that handles recording/replay
 - `src/Matcher` - Configurable request matching (`MatcherInterface`, `DefaultMatcher`)
-- `src/PHPUnit` - PHPUnit extension and subscriber for recording/playback control
+- `src/PHPUnit` - PHPUnit extension and subscriber for recording/replay control
+- `src/PHPUnit/Attribute` - `UseRecord` attribute for recording/replay control in PHPUnit tests
 - `src/Store` - HAR storage logic (`StoreInterface`, `FilesystemStore`)
 
 # Implementation Details
-
-## RecorderMode Enum
-
-```php
-enum RecorderMode: string
-{
-    case RECORD = 'record';              // Always record, replace existing
-    case PLAYBACK = 'playback';          // Only replay, error on unknown
-    case NEW_EPISODES = 'new_episodes';  // Replay known, record unknown
-    case PASS_THROUGH = 'passthrough';   // Bypass entirely
-}
-```
 
 ## RecorderHttpClient (Main Decorator)
 
 Follows CachingHttpClient pattern:
 - Uses AsyncDecoratorTrait for streaming support
 - Intercepts requests based on current mode
-- Uses MockHttpClient for playback responses
+- Uses MockHttpClient for replay responses
 
 ```php
 final class RecorderHttpClient implements HttpClientInterface
@@ -67,10 +55,10 @@ final class RecorderHttpClient implements HttpClientInterface
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        // 1. PASS_THROUGH: just pass through to the inner client
-        // 2. PLAYBACK: find matching entry in HAR file
+        // 1. PASSTHROUGH: just pass through to the inner client
+        // 2. REPLAY: find matching entry in HAR file
         // 3. RECORD: pass through the inner client and store the response
-        // 4. NEW_EPISODES: try playback first, fall back to recording
+        // 4. RECORD_IF_MISSING_AND_REPLAY: try replay first, fall back to recording
     }
 }
 ```
@@ -141,7 +129,7 @@ When enabled, the bundle:
 - `UseRecord` attribute - Controls recording mode and record name per test method or class
 
 ```php
-#[UseRecord(mode: RecorderMode::PLAYBACK, record: 'my-fixture.har')]
+#[UseRecord(record: 'my-fixture.har', mode: RecorderMode::PLAYBACK)]
 public function testSomething(): void { ... }
 ```
 
@@ -151,7 +139,7 @@ public function testSomething(): void { ... }
 | CachingHttpClient.php | AsyncResponse chunk interception, MockResponse creation |
 | TraceableHttpClient.php | Request metadata capture, ArrayObject storage |
 | Test/HarFileResponseFactory.php | HAR parsing, base64 handling |
-| Response/MockResponse.php | fromRequest() factory for playback |
+| Response/MockResponse.php | fromRequest() factory for replay |
 | HttpClientTrait.php | prepareRequest() for URL/option normalization |
 
 # Verification Plan
@@ -164,12 +152,12 @@ public function testSomething(): void { ... }
 3. Manual Testing
 - Create a test script that records a real HTTP call
 - Verify HAR file is created correctly
-- Switch to playback mode, verify response matches
-- Test all modes (record, playback, new_episodes, passthrough)
+- Switch to replay mode, verify response matches
+- Test all modes (record, replay, new_episodes, passthrough)
 4. Streaming Test
 - Record a large response
 - Verify the chunked body is captured completely
 - Playback and verify content matches
 5. HAR Compatibility
 - Import HAR file exported from browser dev tools
-- Verify playback works correctly
+- Verify replay works correctly

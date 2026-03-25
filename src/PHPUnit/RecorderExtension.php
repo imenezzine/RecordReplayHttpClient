@@ -11,6 +11,14 @@ final class RecorderExtension implements Extension
 {
     public function bootstrap(Configuration $configuration, Facade $facade, ParameterCollection $parameters): void
     {
-        $facade->registerSubscriber(new RecorderSubscriber());
+        $defaultDirectory = null;
+
+        if ($parameters->has('defaultDirectory')) {
+            $defaultDirectory = \realpath($parameters->get('defaultDirectory'));
+        }
+
+        $defaultDirectory ??= \dirname($configuration->configurationFile()).'/tests/fixtures/records/';
+
+        $facade->registerSubscriber(new RecorderSubscriber($defaultDirectory));
     }
 }

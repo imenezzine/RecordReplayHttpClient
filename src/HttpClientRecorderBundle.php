@@ -17,8 +17,7 @@ final class HttpClientRecorderBundle extends AbstractBundle implements CompilerP
     {
         $definition->rootNode()
             ->children()
-                ->booleanNode('enabled')->defaultFalse()->end()
-                ->stringNode('records_path')->defaultValue('%kernel.project_dir%/tests/fixtures/records')->end()
+                ->booleanNode('enabled')->defaultFalse()->end() // TODO: default to framework.test
             ->end()
         ;
     }
@@ -28,8 +27,6 @@ final class HttpClientRecorderBundle extends AbstractBundle implements CompilerP
         if (!$config['enabled']) {
             return;
         }
-
-        $container->parameters()->set('http_client.recorder.records_path', $config['records_path']);
     }
 
     public function build(ContainerBuilder $container): void
@@ -52,10 +49,10 @@ final class HttpClientRecorderBundle extends AbstractBundle implements CompilerP
 
         foreach ($container->findTaggedServiceIds('http_client.client') as $serviceId => $attributes) {
             $container
-                ->register("$serviceId.recorder", RecorderHttpClient::class)
+                ->register("{$serviceId}.recorder", RecorderHttpClient::class)
                 ->setDecoratedService($serviceId)
                 ->setArguments([
-                    new Reference("$serviceId.recorder.inner"),
+                    new Reference("{$serviceId}.recorder.inner"),
                     new Reference('http_client.recorder.store'),
                 ])
                 ->addTag('http_client.client');
