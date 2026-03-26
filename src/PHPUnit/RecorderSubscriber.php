@@ -37,7 +37,7 @@ final class RecorderSubscriber implements PreparationStartedSubscriber
         $currentTestDir = \dirname($test->file());
 
         $record = $attributeData[0] ?: $currentTestDir.'/'.$test->className().'/'.$test->methodName().'.har';
-        $mode = $attributeData[1] ?: RecorderMode::RECORD_IF_MISSING_AND_REPLAY;
+        $mode = $attributeData[1] ?: RecorderMode::REPLAY_AND_RECORD_IF_MISSING;
 
         if (\str_starts_with($record, '@')) {
             $record = \substr($record, 1);
